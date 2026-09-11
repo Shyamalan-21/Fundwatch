@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800;900&family=Outfit:wght@600;700;800;900&family=Space+Grotesk:wght@600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,47 +6,77 @@
 
 @layer base {
   body {
-    @apply bg-slate-950 text-slate-100 font-sans antialiased selection:bg-sky-500 selection:text-white;
+    @apply bg-white text-slate-900 font-sans antialiased selection:bg-rose-600 selection:text-white font-bold;
+    font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif;
+    background-color: #ffffff;
+    background-image: radial-gradient(#fecdd3 0.75px, transparent 0.75px), radial-gradient(#fecdd3 0.75px, #ffffff 0.75px);
+    background-size: 30px 30px;
+    background-position: 0 0, 15px 15px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-black tracking-tight text-rose-600;
+    font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  }
+
+  p, span, div, label, button, input, select, table {
+    @apply font-bold;
   }
 }
 
-.glass-card {
-  @apply bg-slate-900/80 backdrop-blur-md border border-slate-800/80 rounded-xl shadow-xl;
+/* Glassmorphism for Red & White theme */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(225, 29, 72, 0.15);
+  box-shadow: 0 20px 40px -15px rgba(225, 29, 72, 0.08), 0 0 0 1px rgba(225, 29, 72, 0.05);
 }
 
-.glass-card-hover {
-  @apply glass-card hover:border-slate-700/90 transition-all duration-200;
+.glass-panel-hover {
+  @apply glass-panel transition-all duration-300;
+}
+.glass-panel-hover:hover {
+  border-color: rgba(225, 29, 72, 0.4);
+  box-shadow: 0 25px 50px -12px rgba(225, 29, 72, 0.18), 0 0 0 1px rgba(225, 29, 72, 0.2);
+  transform: translateY(-2px);
+}
+
+.bento-card {
+  @apply glass-panel rounded-3xl p-6 sm:p-8;
 }
 
 .glass-pill {
-  @apply bg-slate-800/70 backdrop-blur-sm border border-slate-700/60 rounded-full;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(225, 29, 72, 0.2);
+  border-radius: 9999px;
 }
 
-/* Custom modern scrollbar */
+/* Custom Red & White Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: #fff1f2;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #f43f5e;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #e11d48;
 }
 
-/* Animations */
-@keyframes pulse-subtle {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.85; transform: scale(1.02); }
+/* Custom Neon Red Glow */
+.glow-red {
+  box-shadow: 0 0 25px rgba(225, 29, 72, 0.25);
 }
 
-.animate-pulse-subtle {
-  animation: pulse-subtle 3s ease-in-out infinite;
+.glow-red-lg {
+  box-shadow: 0 0 45px rgba(225, 29, 72, 0.35);
 }

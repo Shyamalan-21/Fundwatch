@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { UploadCloud, FileText, CheckCircle2, AlertTriangle, ArrowRight, RefreshCw, Sparkles, Database, Shield } from 'lucide-react';
+import { UploadCloud, FileText, CheckCircle2, AlertTriangle, ArrowRight, RefreshCw, Sparkles, Database, Shield, Zap } from 'lucide-react';
 import { uploadDatasetFile } from '../api/client';
 
 export default function UploadSection({ onUploadSuccess }) {
@@ -49,29 +49,33 @@ export default function UploadSection({ onUploadSuccess }) {
   };
 
   return (
-    <div id="upload" className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+    <div id="upload" className="bento-card relative overflow-hidden space-y-6">
+      {/* Decorative Red Gradient Mesh Flare */}
+      <div className="absolute -top-24 -right-24 w-96 h-96 bg-rose-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-rose-100 pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20 text-xs font-mono font-bold">
-              STEP 1: INGESTION & AUTO-LABELLING
+            <span className="px-3 py-1 rounded-full bg-rose-600 text-white text-xs font-black tracking-wider uppercase shadow-md shadow-rose-600/20">
+              STEP 1: DATA INGESTION
             </span>
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-mono font-bold">
-              &gt;90% Precision Guarantee
+            <span className="px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-xs font-black">
+              &gt;90% Precision Label Guarantee
             </span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-white mt-1">
-            Upload & Ingest MPLADS Expenditure Dataset
+          <h2 className="text-2xl sm:text-3xl font-black text-rose-600 mt-2 tracking-tight">
+            Upload & Auto-Label Expenditure Dataset
           </h2>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Drop raw unlabelled data from <code>dataopencity.in</code> or official portals. The engine normalizes columns, calculates mathematical risk scores ($S_1, S_2, S_3, S_4$), and auto-labels anomalies instantly.
+          <p className="text-xs sm:text-sm text-slate-700 mt-1 font-bold">
+            Drop raw unlabelled data from <code>dataopencity.in</code> or official portals. The mathematical engine normalizes schema columns, computes $S_1, S_2, S_3, S_4$, and generates high-confidence anomaly risk labels.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold shadow-lg shadow-sky-500/20 flex items-center gap-2 transition-all cursor-pointer"
+            className="px-5 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-lg shadow-rose-600/30 flex items-center gap-2 transition-all cursor-pointer hover:scale-105 active:scale-95"
           >
             <UploadCloud className="w-4 h-4" />
             <span>Select File (.csv / .xlsx)</span>
@@ -90,40 +94,40 @@ export default function UploadSection({ onUploadSuccess }) {
         </div>
       </div>
 
-      {/* Drag & Drop Dropzone */}
+      {/* Bento Drag & Drop Area */}
       <div
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`border-2 border-dashed rounded-2xl p-8 sm:p-10 text-center transition-all cursor-pointer ${
+        className={`border-2 border-dashed rounded-3xl p-8 sm:p-12 text-center transition-all cursor-pointer ${
           isDragging
-            ? 'border-sky-400 bg-sky-500/10 scale-[1.01]'
-            : 'border-slate-700/80 bg-slate-950/60 hover:border-slate-600 hover:bg-slate-950'
+            ? 'border-rose-600 bg-rose-50/80 scale-[1.01] shadow-xl shadow-rose-600/15'
+            : 'border-rose-200 bg-white/80 hover:border-rose-400 hover:bg-rose-50/40 shadow-sm'
         }`}
       >
-        <div className="w-14 h-14 rounded-2xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center mx-auto text-sky-400 mb-3">
+        <div className="w-16 h-16 rounded-2xl bg-rose-100 border border-rose-300 flex items-center justify-center mx-auto text-rose-600 mb-4 shadow-md shadow-rose-600/10">
           {uploading ? (
-            <RefreshCw className="w-7 h-7 animate-spin text-sky-400" />
+            <RefreshCw className="w-8 h-8 animate-spin text-rose-600" />
           ) : (
-            <UploadCloud className="w-7 h-7" />
+            <UploadCloud className="w-8 h-8" />
           )}
         </div>
 
         {uploading ? (
-          <div className="space-y-1.5">
-            <h4 className="text-base font-bold text-white">Scoring & Auto-Labelling Records...</h4>
-            <p className="text-xs text-slate-400 font-mono">
-              Running MAD Modified Z-score, IQR fences, Peer benchmarking, and Velocity checks
+          <div className="space-y-2">
+            <h4 className="text-lg font-black text-rose-600">Scoring & Auto-Labelling Dataset...</h4>
+            <p className="text-xs text-slate-600 font-mono font-bold">
+              Calculating MAD Modified Z-score ($S_1$), IQR fences ($S_2$), Peer comparisons ($S_3$), and Velocity spikes ($S_4$)
             </p>
           </div>
         ) : (
           <div className="space-y-2">
-            <h4 className="text-base font-bold text-slate-200">
-              Drag & Drop your raw MPLADS expenditure file here, or <span className="text-sky-400 underline">browse</span>
+            <h4 className="text-lg font-black text-slate-900">
+              Drag & Drop your raw MPLADS expenditure file here, or <span className="text-rose-600 underline decoration-2">browse</span>
             </h4>
-            <p className="text-xs text-slate-400 max-w-lg mx-auto">
-              Auto-maps columns: <code>cost / amount</code>, <code>agency / contractor</code>, <code>dates</code>, <code>category / work_type</code>, <code>district</code>. Unlabelled data is labelled with &gt;90% precision. Pre-labelled data is preserved with 100% exact fidelity.
+            <p className="text-xs text-slate-600 max-w-lg mx-auto font-bold">
+              Auto-maps fields: <code>cost / amount</code>, <code>agency / contractor</code>, <code>dates</code>, <code>category / work_type</code>, <code>district</code>. Unlabelled records labelled with &gt;90% accuracy; pre-labelled data preserved with 100% exact fidelity.
             </p>
           </div>
         )}
@@ -131,43 +135,43 @@ export default function UploadSection({ onUploadSuccess }) {
 
       {/* Error Alert */}
       {uploadError && (
-        <div className="bg-rose-950/40 border border-rose-800/60 p-4 rounded-xl flex items-center gap-3 text-rose-300 text-xs">
-          <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
+        <div className="bg-rose-50 border-2 border-rose-300 p-4 rounded-2xl flex items-center gap-3 text-rose-800 text-xs font-bold shadow-sm">
+          <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
           <span>{uploadError}</span>
         </div>
       )}
 
-      {/* Success Summary Banner */}
+      {/* Success Summary Bento Strip */}
       {uploadResult && (
-        <div className="bg-emerald-950/30 border border-emerald-800/50 p-5 rounded-xl space-y-3">
-          <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+        <div className="bg-rose-50/60 border-2 border-rose-200 p-5 rounded-2xl space-y-3 shadow-sm">
+          <div className="flex items-center gap-2 text-rose-700 font-black text-sm">
+            <CheckCircle2 className="w-5 h-5 text-rose-600 shrink-0" />
             <span>{uploadResult.message || "Dataset successfully scored and auto-labelled!"}</span>
           </div>
 
           {uploadResult.summary && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-              <div className="bg-slate-950/80 p-3 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">Total Records</div>
-                <div className="text-base font-mono font-bold text-white mt-0.5">
+              <div className="bg-white p-3.5 rounded-xl border border-rose-100 shadow-sm">
+                <div className="text-[11px] text-slate-500 font-bold uppercase">Total Records</div>
+                <div className="text-xl font-black font-mono text-slate-900 mt-0.5">
                   {uploadResult.summary.total_records}
                 </div>
               </div>
-              <div className="bg-slate-950/80 p-3 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">Critical Anomalies (CRS ≥ 75)</div>
-                <div className="text-base font-mono font-bold text-rose-400 mt-0.5">
+              <div className="bg-white p-3.5 rounded-xl border border-rose-100 shadow-sm">
+                <div className="text-[11px] text-slate-500 font-bold uppercase">Critical Anomalies (CRS ≥ 75)</div>
+                <div className="text-xl font-black font-mono text-rose-600 mt-0.5">
                   {uploadResult.summary.critical_anomalies_count || 0}
                 </div>
               </div>
-              <div className="bg-slate-950/80 p-3 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">Ghost Bills (≤3d finish)</div>
-                <div className="text-base font-mono font-bold text-amber-400 mt-0.5">
+              <div className="bg-white p-3.5 rounded-xl border border-rose-100 shadow-sm">
+                <div className="text-[11px] text-slate-500 font-bold uppercase">Ghost Bills (≤3d finish)</div>
+                <div className="text-xl font-black font-mono text-rose-600 mt-0.5">
                   {uploadResult.summary.ghost_bills_count || 0}
                 </div>
               </div>
-              <div className="bg-slate-950/80 p-3 rounded-lg border border-slate-800">
-                <div className="text-[11px] text-slate-400">Auto-Labelling Precision</div>
-                <div className="text-base font-mono font-bold text-emerald-400 mt-0.5">
+              <div className="bg-white p-3.5 rounded-xl border border-rose-100 shadow-sm">
+                <div className="text-[11px] text-slate-500 font-bold uppercase">Auto-Label Precision</div>
+                <div className="text-xl font-black font-mono text-rose-600 mt-0.5">
                   &gt;92% Empirical
                 </div>
               </div>
