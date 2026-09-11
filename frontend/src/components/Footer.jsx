@@ -15,9 +15,6 @@ export default function Footer() {
               <span className="font-black text-xl text-emerald-400 tracking-tight">
                 FUNDWATCH
               </span>
-              <span className="text-[10px] uppercase font-black tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 font-mono">
-                MoSPI PS10
-              </span>
             </div>
             <p className="text-xs text-slate-300 max-w-md leading-relaxed font-bold">
               An Explainable MPLADS Spending-Anomaly Detection & Visual Intelligence System. Built with 4-Dimension Mathematical Risk Scoring for the Ministry of Statistics and Programme Implementation.

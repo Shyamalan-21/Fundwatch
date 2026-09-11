@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   ResponsiveContainer, BarChart, Bar, ScatterChart, Scatter,
   XAxis, YAxis, ZAxis, Tooltip, Legend, CartesianGrid, ReferenceLine, Cell,
-  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
+  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
+  AreaChart, Area, LineChart, Line, ComposedChart
 } from 'recharts';
 import {
   BarChart3 as BarChartIcon, TrendingUp, AlertTriangle, Layers, Building, Flame,
@@ -78,11 +79,13 @@ export default function VisualIntelligence({ onSelectAnomaly }) {
 
   const filteredScatterPoints = useMemo(() => {
     return scatterData.points.filter(p => {
-      const matchCat = selectedCategory === 'ALL' || p.category === selectedCategory;
-      const matchRisk = (p.composite_risk || 0) >= minRisk;
+      const matchCat   = selectedCategory === 'ALL' || p.category === selectedCategory;
+      const matchRisk  = (p.composite_risk || 0) >= minRisk;
       const matchGhost = onlyGhostBills ? p.is_ghost : true;
-      const matchQuad = selectedQuadrant === 'ALL' || p.quadrant === selectedQuadrant;
-      return matchCat && matchRisk && matchGhost && matchQuad;
+      const matchQuad  = selectedQuadrant === 'ALL' || p.quadrant === selectedQuadrant;
+      // Only show points with positive X and Y (first quadrant)
+      const matchPositive = (p.x ?? 0) >= 0 && (p.y ?? 0) >= 0;
+      return matchCat && matchRisk && matchGhost && matchQuad && matchPositive;
     });
   }, [scatterData, selectedCategory, minRisk, onlyGhostBills, selectedQuadrant]);
 
@@ -105,102 +108,12 @@ export default function VisualIntelligence({ onSelectAnomaly }) {
 
   return (
     <div className="space-y-8 font-bold">
-      {/* Visual Intelligence Section Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-emerald-900/60 pb-5">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="px-3 py-1 rounded-full bg-emerald-500 text-black text-xs font-black tracking-wider uppercase shadow-md shadow-emerald-500/20">
-              STEP 3: VISUAL INTELLIGENCE
-            </span>
-            <span className="px-3 py-1 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 text-xs font-black">
-              5 Core Diagnostic Maps
-            </span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-black text-emerald-400 mt-2 tracking-tight flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-emerald-400" />
-            Visual Fraud & Anomaly Intelligence Suite
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-300 mt-1 font-bold">
-            Multivariate diagnostics: Histograms, 4-Quadrant Cartesian Crosshairs (+X, -X, +Y, -Y), Temporal Calendar Heatmaps & 3D Contour Surfaces
-          </p>
-        </div>
-
-        {/* Global Controls Filter Pill */}
-        <div className="flex flex-wrap items-center gap-3 bg-slate-900/90 p-3 rounded-2xl border border-emerald-500/30 shadow-sm font-bold">
-          <div>
-            <label className="block text-[10px] text-slate-400 font-bold uppercase mb-0.5">Filter Category</label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-1.5 bg-slate-950 border border-emerald-500/40 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-400 font-bold"
-            >
-              {categories.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <div className="flex justify-between text-[10px] text-slate-400 font-bold mb-0.5">
-              <span>MIN RISK</span>
-              <span className="font-mono text-emerald-400 font-black">{minRisk}+</span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="85"
-              step="5"
-              value={minRisk}
-              onChange={(e) => setMinRisk(Number(e.target.value))}
-              className="accent-emerald-400 h-1.5 bg-slate-800 rounded w-24 cursor-pointer"
-            />
-          </div>
-
-          <div className="flex items-end">
-            <button
-              onClick={() => setOnlyGhostBills(!onlyGhostBills)}
-              className={`px-4 py-1.5 rounded-xl border-2 text-xs font-black transition-all cursor-pointer ${
-                onlyGhostBills
-                  ? 'bg-emerald-500 text-black border-emerald-400 shadow-md shadow-emerald-500/30'
-                  : 'bg-slate-950 border-emerald-500/40 text-emerald-400 hover:bg-slate-900'
-              }`}
-            >
-              {onlyGhostBills ? "Ghost Bills Only (≤3d)" : "Highlight Ghost Bills"}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* BENTO KPI STRIP */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bento-card !p-5 relative overflow-hidden border-emerald-500/30">
-          <div className="text-[11px] text-slate-400 uppercase font-black">March Fiscal Surge Ratio</div>
-          <div className="text-3xl font-black font-mono text-emerald-400 mt-1">
-            {calendarData.stats?.march_dumping_ratio || '3.4'}×
-          </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">vs annual baseline monthly spend</div>
-        </div>
-        <div className="bento-card !p-5 relative overflow-hidden border-emerald-500/30">
-          <div className="text-[11px] text-slate-400 uppercase font-black">Total Fiscal Outliers</div>
-          <div className="text-3xl font-black font-mono text-emerald-400 mt-1">
-            {calendarData.stats?.total_fiscal_anomalies || '142'}
-          </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Flagged with CRS ≥ 70</div>
-        </div>
-        <div className="bento-card !p-5 relative overflow-hidden border-emerald-500/30">
-          <div className="text-[11px] text-slate-400 uppercase font-black">Cartel & Ghost Quadrant (Q1)</div>
-          <div className="text-3xl font-black font-mono text-emerald-400 mt-1">
-            {scatterData.points.filter(p => p.quadrant === 'Q1_CRITICAL').length}
-          </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">High Cost + Hyper Velocity</div>
-        </div>
-        <div className="bento-card !p-5 relative overflow-hidden border-emerald-500/30">
-          <div className="text-[11px] text-slate-400 uppercase font-black">Monopoly Concentration</div>
-          <div className="text-3xl font-black font-mono text-emerald-400 mt-1">
-            {waterfallData[0]?.share_pct || '34.2'}%
-          </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Captured by single contractor</div>
-        </div>
+      {/* Visual Intelligence Section Header (CENTER ALIGNED) */}
+      <div className="text-center space-y-3 border-b border-emerald-900/40 pb-6 max-w-4xl mx-auto">
+        <h2 className="text-2xl sm:text-4xl font-black text-emerald-300 tracking-tight flex items-center justify-center gap-3">
+          <Sparkles className="w-7 h-7 text-emerald-400 animate-pulse" />
+          Visual Fraud &amp; Anomaly Intelligence Suite
+        </h2>
       </div>
 
       {/* SECTION 1: HISTOGRAM (DISTRIBUTION OF RISK SCORES & COST BRACKETS) */}
@@ -301,10 +214,10 @@ export default function VisualIntelligence({ onSelectAnomaly }) {
           <div>
             <div className="flex items-center gap-2">
               <span className="px-3 py-1 rounded-full bg-emerald-500 text-black text-xs font-black tracking-wider uppercase shadow-md shadow-emerald-500/20">
-                CHART 2: 4-QUADRANT CARTESIAN CROSSHAIR
+                CHART 2: SCATTER MATRIX
               </span>
               <span className="px-3 py-1 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 text-xs font-black">
-                (+X, -X, +Y, -Y) Axes
+                +X, +Y Axes
               </span>
             </div>
             <h3 className="text-xl sm:text-2xl font-black text-emerald-400 mt-2 flex items-center gap-2">
@@ -312,63 +225,8 @@ export default function VisualIntelligence({ onSelectAnomaly }) {
               Cost Deviation vs Turnaround Velocity Matrix
             </h3>
             <p className="text-xs text-slate-300 font-bold">
-              Crosshair centered at origin (0,0) baseline. Explicitly separates over-budget (+X) vs hyper-velocity (+Y) anomalies.
+              Positive-axis view: Over-budget (+X) vs Hyper-velocity turnaround (+Y). Only flagged anomaly zone shown.
             </p>
-          </div>
-
-          {/* Quadrant Quick Filter Buttons */}
-          <div className="flex items-center gap-1.5 bg-slate-950 p-1.5 rounded-2xl border border-emerald-500/30 text-xs font-black">
-            <button
-              onClick={() => setSelectedQuadrant('ALL')}
-              className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${selectedQuadrant === 'ALL' ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/20' : 'text-slate-400 hover:text-emerald-400'}`}
-            >
-              All 4 Quadrants
-            </button>
-            <button
-              onClick={() => setSelectedQuadrant('Q1_CRITICAL')}
-              className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${selectedQuadrant === 'Q1_CRITICAL' ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/20' : 'text-slate-400 hover:text-emerald-400'}`}
-            >
-              Q1 (+X, +Y)
-            </button>
-            <button
-              onClick={() => setSelectedQuadrant('Q2_MICRO_SPLIT')}
-              className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${selectedQuadrant === 'Q2_MICRO_SPLIT' ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/20' : 'text-slate-400 hover:text-emerald-400'}`}
-            >
-              Q2 (-X, +Y)
-            </button>
-            <button
-              onClick={() => setSelectedQuadrant('Q3_COMPLIANT')}
-              className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${selectedQuadrant === 'Q3_COMPLIANT' ? 'bg-emerald-500 text-black shadow-md shadow-emerald-500/20' : 'text-slate-400 hover:text-emerald-400'}`}
-            >
-              Q3 (-X, -Y)
-            </button>
-          </div>
-        </div>
-
-        {/* Quadrant Banner Strip */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-bold">
-          <div className="bg-emerald-950/40 border border-emerald-500/50 p-3.5 rounded-2xl shadow-sm">
-            <div className="font-black text-emerald-400 flex items-center gap-1">
-              <span>Q1 (+X, +Y)</span>
-              <AlertTriangle className="w-3.5 h-3.5 text-emerald-400" />
-            </div>
-            <div className="text-[12px] text-white font-black mt-0.5">Cartel & Ghost Velocity</div>
-            <div className="text-[10px] text-slate-400">Extreme Overprice + ≤3d finish</div>
-          </div>
-          <div className="bg-slate-900/90 border border-emerald-500/30 p-3.5 rounded-2xl shadow-sm">
-            <div className="font-black text-emerald-400">Q2 (-X, +Y)</div>
-            <div className="text-[12px] text-white font-black mt-0.5">Rapid Micro-Splitting</div>
-            <div className="text-[10px] text-slate-400">Low Cost + Instant Invoicing</div>
-          </div>
-          <div className="bg-slate-900/90 border border-emerald-500/20 p-3.5 rounded-2xl shadow-sm">
-            <div className="font-black text-emerald-400">Q3 (-X, -Y)</div>
-            <div className="text-[12px] text-white font-black mt-0.5">Compliant Baseline</div>
-            <div className="text-[10px] text-slate-400">Normal Lead Time & Cost</div>
-          </div>
-          <div className="bg-slate-900/90 border border-emerald-500/30 p-3.5 rounded-2xl shadow-sm">
-            <div className="font-black text-emerald-400">Q4 (+X, -Y)</div>
-            <div className="text-[12px] text-white font-black mt-0.5">Stalled Mega-Projects</div>
-            <div className="text-[10px] text-slate-400">High Cost + Severe Delays</div>
           </div>
         </div>
 
@@ -383,26 +241,24 @@ export default function VisualIntelligence({ onSelectAnomaly }) {
                 dataKey="x"
                 name="Cost Deviation"
                 unit="%"
-                domain={[-100, 350]}
+                domain={[0, 350]}
                 stroke="#10b981"
                 tick={{ fontSize: 11, fontWeight: 'bold' }}
-                label={{ value: "← -X (Under-Budget) | +X (Over-Budget vs Peer Median %) →", position: "insideBottom", offset: -20, fill: "#10b981", fontSize: 11, fontWeight: 'bold' }}
+                label={{ value: "+X → Cost Deviation above Peer Median (%)", position: "insideBottom", offset: -20, fill: "#10b981", fontSize: 11, fontWeight: 'bold' }}
               />
               <YAxis
                 type="number"
                 dataKey="y"
                 name="Turnaround Velocity"
                 unit="%"
-                domain={[-100, 350]}
+                domain={[0, 350]}
                 stroke="#10b981"
                 tick={{ fontSize: 11, fontWeight: 'bold' }}
-                label={{ value: "← -Y (Stalled Latency) | +Y (Hyper Velocity Surge %) →", angle: -90, position: "insideLeft", offset: -15, fill: "#10b981", fontSize: 11, fontWeight: 'bold' }}
+                label={{ value: "+Y → Turnaround Velocity Surge (%)", angle: -90, position: "insideLeft", offset: -15, fill: "#10b981", fontSize: 11, fontWeight: 'bold' }}
               />
               <ZAxis type="number" dataKey="composite_risk" range={[50, 300]} />
 
-              {/* BOLD GREEN '+' CROSSHAIR AT ORIGIN (0,0) */}
-              <ReferenceLine x={0} stroke="#10b981" strokeWidth={3} strokeDasharray="4 4" label={{ value: "+Y Axis", position: "insideTopLeft", fill: "#10b981", fontSize: 12, fontWeight: 'bold' }} />
-              <ReferenceLine y={0} stroke="#10b981" strokeWidth={3} strokeDasharray="4 4" label={{ value: "+X Axis", position: "insideBottomRight", fill: "#10b981", fontSize: 12, fontWeight: 'bold' }} />
+              {/* No crosshair needed — axis origin is at 0,0 */}
 
               <Tooltip
                 content={({ active, payload }) => {
@@ -436,14 +292,21 @@ export default function VisualIntelligence({ onSelectAnomaly }) {
 
               <Scatter name="Projects" data={filteredScatterPoints} cursor="pointer">
                 {filteredScatterPoints.map((entry, index) => {
-                  let fillColor = entry.is_ghost || entry.quadrant === 'Q1_CRITICAL' ? "#00ff66" : (entry.quadrant === 'Q2_MICRO_SPLIT' ? "#10b981" : "#059669");
+                  // Color by risk: red ≥70, amber ≥50, bright green otherwise
+                  const risk = entry.composite_risk || 0;
+                  const fillColor = risk >= 70
+                    ? '#ef4444'
+                    : risk >= 50
+                    ? '#f59e0b'
+                    : '#10b981';
+                  const strokeColor = risk >= 70 ? '#ff6666' : risk >= 50 ? '#fbbf24' : '#ffffff';
                   return (
                     <Cell
                       key={`scatter-cell-${index}`}
                       fill={fillColor}
-                      fillOpacity={0.9}
-                      stroke="#ffffff"
-                      strokeWidth={2}
+                      fillOpacity={0.92}
+                      stroke={strokeColor}
+                      strokeWidth={risk >= 70 ? 2.5 : 1.5}
                     />
                   );
                 })}
@@ -453,116 +316,155 @@ export default function VisualIntelligence({ onSelectAnomaly }) {
         </div>
       </div>
 
-      {/* SECTION 3: CALENDAR HEATMAP (TEMPORAL ACTIVITY & MARCH DUMPING MATRIX) */}
+      {/* SECTION 3: MONTHLY SPEND & ANOMALY TREND (AREA + LINE) */}
       <div className="bento-card space-y-4 relative overflow-hidden border-emerald-500/30">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-900/60 pb-4">
           <div>
             <div className="flex items-center gap-2">
               <span className="px-3 py-1 rounded-full bg-emerald-500 text-black text-xs font-black tracking-wider uppercase shadow-md shadow-emerald-500/20">
-                CHART 3: CALENDAR HEATMAP
+                CHART 3: MONTHLY TREND
               </span>
               <span className="px-3 py-1 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 text-xs font-black">
-                Fiscal Velocity & Surge Matrix
+                Spend &amp; Anomaly Line
               </span>
             </div>
             <h3 className="text-xl sm:text-2xl font-black text-emerald-400 mt-2 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-emerald-400" />
-              Annual Expenditure & Anomaly Intensity Heatmap
+              <TrendingUp className="w-5 h-5 text-emerald-400" />
+              Monthly Expenditure &amp; Anomaly Count Trend
             </h3>
             <p className="text-xs text-slate-300 font-bold">
-              Interactive 12-Month Calendar Grid. Pinpoints rapid end-of-financial-year (March Madness) fund dumping.
+              12-month spend area (emerald) overlaid with high-risk anomaly count (red line). Spikes reveal fiscal-year-end dumping.
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs font-bold">
-            <span className="text-slate-400">Intensity:</span>
-            <div className="flex items-center gap-1 font-mono text-[10px]">
-              <span className="w-3.5 h-3.5 rounded bg-slate-900 border border-slate-800"></span>
-              <span className="w-3.5 h-3.5 rounded bg-emerald-950 border border-emerald-900"></span>
-              <span className="w-3.5 h-3.5 rounded bg-emerald-700"></span>
-              <span className="w-3.5 h-3.5 rounded bg-emerald-500 shadow-sm"></span>
-              <span className="w-3.5 h-3.5 rounded bg-emerald-300 shadow-md"></span>
-              <span className="text-emerald-400 font-black ml-1">Critical Surge</span>
-            </div>
+          <div className="flex items-center gap-4 text-[11px] font-bold flex-wrap">
+            <span className="flex items-center gap-1.5">
+              <span className="w-4 h-[3px] bg-emerald-500 inline-block rounded" />
+              Monthly Spend
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-4 h-[3px] bg-red-500 inline-block rounded" />
+              Anomaly Count
+            </span>
           </div>
         </div>
 
-        {/* Monthly Bar Overview + Daily Activity Heatmap Matrix */}
-        <div className="space-y-4">
-          {/* Monthly Spend Bar Strip */}
-          <div className="h-44 bg-slate-950 p-3 rounded-2xl border border-emerald-500/20 shadow-sm">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={calendarData.monthly_summary} margin={{ top: 10, right: 15, bottom: 20, left: 10 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#064e3b" vertical={false} />
-                <XAxis dataKey="month" stroke="#10b981" tick={{ fontSize: 11, fontWeight: 'bold' }} />
-                <YAxis stroke="#10b981" tick={{ fontSize: 11, fontWeight: 'bold' }} tickFormatter={(v) => formatINR(v)} />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const d = payload[0].payload;
-                      return (
-                        <div className="bg-slate-950 border-2 border-emerald-500/50 p-3 rounded-2xl shadow-xl text-xs space-y-1 font-bold">
-                          <div className="font-black text-emerald-400 text-sm">{d.month} Expenditure</div>
-                          <div className="text-slate-300">Total Sanctioned: <strong className="text-emerald-400 font-black">{formatINR(d.total_spend_inr)}</strong></div>
-                          <div className="text-slate-300">Works Count: <strong className="text-white font-bold">{d.works_count}</strong></div>
-                          <div className="text-slate-300">High Risk Anomalies: <strong className="text-emerald-400 font-black">{d.anomaly_count}</strong></div>
-                          {d.is_fiscal_surge && (
-                            <div className="text-emerald-300 font-black">🔥 Fiscal Surge Spike Month</div>
-                          )}
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar dataKey="total_spend_inr" radius={[8, 8, 0, 0]}>
-                  {calendarData.monthly_summary?.map((entry, index) => (
-                    <Cell
-                      key={`month-cell-${index}`}
-                      fill={entry.month === 'Mar' ? '#00ff66' : (entry.anomaly_count >= 3 ? '#10b981' : '#047857')}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Daily Calendar Matrix Grid */}
-          <div className="bg-slate-950 border border-emerald-500/30 p-4 rounded-2xl overflow-x-auto shadow-sm">
-            <div className="text-[11px] font-black text-emerald-400 mb-2 flex items-center justify-between">
-              <span>DAILY EXPENDITURE & ANOMALY DENSITY MATRIX</span>
-              <span className="text-slate-500 font-mono text-[10px]">Days 1 → 31 (Horizontal) × Months (Vertical)</span>
-            </div>
-            
-            <div className="min-w-[700px] space-y-1.5">
-              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m) => {
-                const monthCells = calendarData.daily_matrix?.filter(d => d.month === m) || [];
-                return (
-                  <div key={m} className="flex items-center gap-1.5">
-                    <span className="w-8 text-[11px] font-mono font-black text-emerald-400">{m}</span>
-                    <div className="flex items-center gap-1 flex-1">
-                      {Array.from({ length: 31 }, (_, dayIdx) => {
-                        const cell = monthCells.find(c => c.day === dayIdx + 1);
-                        const lvl = cell?.intensity_level || 0;
-                        let bgClass = "bg-slate-900 border-slate-800";
-                        if (lvl === 1) bgClass = "bg-emerald-950 border-emerald-900";
-                        if (lvl === 2) bgClass = "bg-emerald-800 border-emerald-700";
-                        if (lvl === 3) bgClass = "bg-emerald-500 border-emerald-400 shadow-sm";
-                        if (lvl === 4) bgClass = "bg-emerald-300 border-white shadow-md";
-
-                        return (
-                          <div
-                            key={dayIdx}
-                            title={`${m} ${dayIdx + 1}: ${cell?.works_count || 0} works, ${formatINR(cell?.total_spend_inr || 0)}`}
-                            className={`flex-1 h-4 rounded-[4px] border transition-transform hover:scale-125 cursor-pointer ${bgClass}`}
-                          />
-                        );
-                      })}
+        <div className="h-72 bg-slate-950 p-3 rounded-2xl border border-emerald-500/20 shadow-sm">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={calendarData.monthly_summary} margin={{ top: 16, right: 40, bottom: 20, left: 10 }}>
+              <defs>
+                <linearGradient id="spendGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#064e3b" vertical={false} />
+              <XAxis
+                dataKey="month"
+                stroke="#10b981"
+                tick={{ fontSize: 11, fontWeight: 'bold', fill: '#6ee7b7' }}
+              />
+              {/* Left Y — spend */}
+              <YAxis
+                yAxisId="spend"
+                orientation="left"
+                stroke="#10b981"
+                tick={{ fontSize: 10, fontWeight: 'bold', fill: '#6ee7b7' }}
+                tickFormatter={v => formatINR(v)}
+                width={60}
+              />
+              {/* Right Y — anomaly count */}
+              <YAxis
+                yAxisId="anom"
+                orientation="right"
+                stroke="#ef4444"
+                tick={{ fontSize: 10, fontWeight: 'bold', fill: '#f87171' }}
+                width={35}
+              />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null;
+                  const d = payload[0]?.payload;
+                  return (
+                    <div className="bg-slate-950 border-2 border-emerald-500/50 p-3 rounded-2xl shadow-xl text-xs space-y-1 font-bold">
+                      <div className="font-black text-emerald-400 text-sm">{d?.month}</div>
+                      <div className="text-slate-300">Total Spend: <strong className="text-emerald-400 font-black">{formatINR(d?.total_spend_inr)}</strong></div>
+                      <div className="text-slate-300">Works: <strong className="text-white">{d?.works_count}</strong></div>
+                      <div className="text-slate-300">Anomalies: <strong className="text-red-400 font-black">{d?.anomaly_count}</strong></div>
+                      {d?.is_fiscal_surge && (
+                        <div className="text-emerald-300 font-black">🔥 Fiscal Surge Month</div>
+                      )}
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                }}
+              />
+              {/* Spend — filled area */}
+              <Area
+                yAxisId="spend"
+                type="monotone"
+                dataKey="total_spend_inr"
+                name="Monthly Spend"
+                stroke="#10b981"
+                strokeWidth={2.5}
+                fill="url(#spendGradient)"
+                dot={{ fill: '#10b981', r: 4, strokeWidth: 0 }}
+                activeDot={{ r: 6, fill: '#00ff88', strokeWidth: 0 }}
+              />
+              {/* Anomaly count — red line */}
+              <Line
+                yAxisId="anom"
+                type="monotone"
+                dataKey="anomaly_count"
+                name="Anomaly Count"
+                stroke="#ef4444"
+                strokeWidth={2.5}
+                dot={(props) => {
+                  const { cx, cy, payload } = props;
+                  return (
+                    <circle
+                      key={payload.month}
+                      cx={cx}
+                      cy={cy}
+                      r={payload.anomaly_count >= 10 ? 7 : 4}
+                      fill={payload.is_fiscal_surge ? '#ff0000' : '#ef4444'}
+                      stroke={payload.is_fiscal_surge ? '#fff' : 'transparent'}
+                      strokeWidth={1.5}
+                    />
+                  );
+                }}
+                activeDot={{ r: 7, fill: '#ff4444', strokeWidth: 0 }}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* KPI strip below the chart */}
+        <div className="grid grid-cols-3 gap-3 text-xs font-bold">
+          {[
+            {
+              label: 'Peak Spend Month',
+              value: calendarData.monthly_summary?.length
+                ? calendarData.monthly_summary.reduce((a, b) => a.total_spend_inr > b.total_spend_inr ? a : b, {}).month ?? '—'
+                : '—',
+              color: 'text-emerald-400',
+            },
+            {
+              label: 'Peak Anomaly Month',
+              value: calendarData.monthly_summary?.length
+                ? calendarData.monthly_summary.reduce((a, b) => a.anomaly_count > b.anomaly_count ? a : b, {}).month ?? '—'
+                : '—',
+              color: 'text-red-400',
+            },
+            {
+              label: 'Total Anomalies',
+              value: calendarData.stats?.total_fiscal_anomalies ?? 0,
+              color: 'text-amber-400',
+            },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="bg-slate-950/80 border border-emerald-500/20 rounded-2xl p-3">
+              <div className="text-slate-400 font-black uppercase text-[10px] tracking-wider">{label}</div>
+              <div className={`text-2xl font-black mt-0.5 ${color}`}>{value}</div>
             </div>
-          </div>
+          ))}
         </div>
       </div>
 
@@ -571,57 +473,84 @@ export default function VisualIntelligence({ onSelectAnomaly }) {
 
       {/* SECTION 5: MULTI-SIGNAL RADAR & PARETO WATERFALL MONOPOLY */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Radar Profiler */}
+        {/* Agency Risk Score Horizontal Bar Chart */}
         <div className="bento-card space-y-4 relative overflow-hidden border-emerald-500/30">
           <div className="flex items-center justify-between border-b border-emerald-900/60 pb-4">
             <div>
               <span className="px-3 py-1 rounded-full bg-emerald-500 text-black text-xs font-black tracking-wider uppercase shadow-md shadow-emerald-500/20">
-                CHART 5A: SPIDER RADAR
+                CHART 5A: AGENCY RISK RANKING
               </span>
               <h3 className="text-xl font-black text-emerald-400 mt-2 flex items-center gap-2">
-                <Target className="w-5 h-5 text-emerald-400" />
-                4-Dimension Multi-Signal Profiler
+                <Activity className="w-5 h-5 text-emerald-400" />
+                Agency Composite Risk Score Ranking
               </h3>
+              <p className="text-xs text-slate-300 font-bold mt-0.5">Ranked high → low. Red = Critical (≥70), Amber = Elevated (≥50).</p>
             </div>
-            
-            {/* Agency Selector */}
-            <select
-              value={selectedRadarAgency}
-              onChange={(e) => setSelectedRadarAgency(e.target.value)}
-              className="px-3 py-1.5 bg-slate-950 border border-emerald-500/40 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-400 font-bold max-w-[180px] truncate"
-            >
-              {radarData.agencies?.filter(a => !a.agency_name.includes("Benchmark")).map(a => (
-                <option key={a.agency_name} value={a.agency_name}>
-                  {a.agency_name} (CRS: {a.composite_risk})
-                </option>
-              ))}
-            </select>
           </div>
 
           <div className="h-64 bg-slate-950 p-3 rounded-2xl border border-emerald-500/20 shadow-sm">
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={formattedRadarData} margin={{ top: 10, right: 30, bottom: 10, left: 30 }}>
-                <PolarGrid stroke="#064e3b" />
-                <PolarAngleAxis dataKey="metric" stroke="#10b981" tick={{ fontSize: 10, fontWeight: 'bold' }} />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#047857" tick={{ fontSize: 9, fontWeight: 'bold' }} />
-                <Radar name="State Compliant Benchmark" dataKey="baseline" stroke="#047857" fill="#047857" fillOpacity={0.4} />
-                <Radar name={selectedRadarAgency || "Selected Agency"} dataKey="agency" stroke="#00ff66" fill="#00ff66" fillOpacity={0.6} />
-                <Legend wrapperStyle={{ fontSize: 11, paddingTop: 10, fontWeight: 'bold' }} />
+              <BarChart
+                data={[...( radarData.agencies || [])]
+                  .filter(a => !a.agency_name.includes('Benchmark'))
+                  .sort((a, b) => b.composite_risk - a.composite_risk)
+                  .slice(0, 8)
+                  .map(a => ({
+                    name: a.agency_name.length > 22 ? a.agency_name.slice(0, 22) + '…' : a.agency_name,
+                    risk: a.composite_risk,
+                    full_name: a.agency_name,
+                  }))}
+                layout="vertical"
+                margin={{ top: 4, right: 20, left: 8, bottom: 4 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#0d2418" horizontal={false} />
+                <XAxis
+                  type="number"
+                  domain={[0, 100]}
+                  stroke="#10b981"
+                  tick={{ fontSize: 10, fontWeight: 700, fill: '#6ee7b7' }}
+                  tickFormatter={v => `${v}`}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  tick={{ fontSize: 10, fontWeight: 700, fill: '#94a3b8' }}
+                  width={150}
+                  stroke="transparent"
+                />
+                <ReferenceLine x={70} stroke="#ef4444" strokeDasharray="4 4" strokeWidth={1.5}
+                  label={{ value: 'Critical', position: 'insideTopRight', fill: '#ef4444', fontSize: 9, fontWeight: 700 }} />
+                <ReferenceLine x={50} stroke="#f59e0b" strokeDasharray="4 4" strokeWidth={1.5}
+                  label={{ value: 'Elevated', position: 'insideTopRight', fill: '#f59e0b', fontSize: 9, fontWeight: 700 }} />
                 <Tooltip
                   content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="bg-slate-950 border-2 border-emerald-500/50 p-3 rounded-2xl shadow-xl text-xs space-y-1 font-bold">
-                          <div className="font-black text-emerald-400">{payload[0]?.payload?.metric}</div>
-                          <div className="text-slate-400">Benchmark: {payload[0]?.payload?.baseline} / 100</div>
-                          <div className="text-emerald-400 font-black">{selectedRadarAgency}: {payload[0]?.payload?.agency} / 100</div>
-                        </div>
-                      );
-                    }
-                    return null;
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0].payload;
+                    return (
+                      <div className="bg-slate-900 border border-emerald-500/40 rounded-xl p-3 text-xs shadow-2xl">
+                        <p className="font-black text-white mb-1">{d.full_name}</p>
+                        <p className={`font-black ${
+                          d.risk >= 70 ? 'text-red-400' : d.risk >= 50 ? 'text-amber-400' : 'text-emerald-400'
+                        }`}>Risk Score: {d.risk} / 100</p>
+                      </div>
+                    );
                   }}
+                  cursor={{ fill: 'rgba(16,185,129,0.06)' }}
                 />
-              </RadarChart>
+                <Bar dataKey="risk" radius={[0, 6, 6, 0]} maxBarSize={22}>
+                  {[...( radarData.agencies || [])]
+                    .filter(a => !a.agency_name.includes('Benchmark'))
+                    .sort((a, b) => b.composite_risk - a.composite_risk)
+                    .slice(0, 8)
+                    .map((entry, idx) => (
+                      <Cell
+                        key={idx}
+                        fill={entry.composite_risk >= 70 ? '#ef4444' : entry.composite_risk >= 50 ? '#f59e0b' : '#10b981'}
+                        fillOpacity={0.88}
+                      />
+                    ))}
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>

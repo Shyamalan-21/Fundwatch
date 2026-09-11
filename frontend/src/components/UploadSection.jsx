@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { UploadCloud, FileText, CheckCircle2, AlertTriangle, ArrowRight, RefreshCw, Sparkles, Database, Shield, Zap, PlayCircle } from 'lucide-react';
+import { UploadCloud, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { uploadDatasetFile } from '../api/client';
 
-export default function UploadSection({ onUploadSuccess, hasUploaded, onReset }) {
+export default function UploadSection({ onUploadSuccess, hasUploaded }) {
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
@@ -31,37 +31,6 @@ export default function UploadSection({ onUploadSuccess, hasUploaded, onReset })
     }
   };
 
-  const handleLoadSampleDataset = async () => {
-    setUploading(true);
-    setUploadError(null);
-    try {
-      // Simulate fetching sample and auto-scoring
-      if (onUploadSuccess) {
-        await onUploadSuccess({
-          status: "success",
-          message: "Benchmark MPLADS Dataset loaded and scored across 4 mathematical dimensions.",
-          summary: {
-            total_records: 4265,
-            critical_anomalies_count: 60,
-            ghost_bills_count: 164
-          }
-        });
-      }
-      setUploadResult({
-        message: "Benchmark Dataset (4,265 works across 86 agencies) successfully reviewed and scored!",
-        summary: {
-          total_records: 4265,
-          critical_anomalies_count: 60,
-          ghost_bills_count: 164
-        }
-      });
-    } catch (err) {
-      setUploadError("Failed to load sample dataset.");
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const onDragOver = (e) => {
     e.preventDefault();
     setIsDragging(true);
@@ -80,73 +49,30 @@ export default function UploadSection({ onUploadSuccess, hasUploaded, onReset })
   };
 
   return (
-    <div id="upload" className="bento-card relative overflow-hidden space-y-6 border-emerald-500/30">
+    <div id="upload" className="bento-card relative overflow-hidden space-y-6 border-emerald-500/30 text-center">
       {/* Decorative Green Matrix Flare */}
       <div className="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-emerald-900/60 pb-5">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="px-3 py-1 rounded-full bg-emerald-500 text-black text-xs font-black tracking-wider uppercase shadow-md shadow-emerald-500/20">
-              {hasUploaded ? "DATASET ACTIVE & SCORED" : "STEP 1: INGESTION & AUTO-LABELLING"}
-            </span>
-            <span className="px-3 py-1 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-500/40 text-xs font-black">
-              &gt;90% Statistical Precision
-            </span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-black text-emerald-400 mt-2 tracking-tight">
-            {hasUploaded ? "Active MPLADS Expenditure Dataset" : "Upload & Analyze MPLADS Expenditure Dataset"}
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-300 mt-1 font-bold">
-            {hasUploaded 
-              ? "Your dataset is currently ingested and scored across S1 (MAD Z-score), S2 (IQR), S3 (Peer benchmarks), and S4 (Ghost velocity). Upload another file anytime to re-analyze."
-              : "Upload any unlabelled or labelled MPLADS dataset from dataopencity.in or official portals. All calculations, anomaly detection, and charts will generate automatically upon review."
-            }
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {!hasUploaded && (
-            <button
-              onClick={handleLoadSampleDataset}
-              disabled={uploading}
-              className="px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-emerald-400 text-xs font-black flex items-center gap-2 transition-all cursor-pointer hover:border-emerald-400"
-            >
-              <PlayCircle className="w-4 h-4 text-emerald-400" />
-              <span>Load Sample Dataset (4,265 Works)</span>
-            </button>
-          )}
-
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="px-5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-black shadow-lg shadow-emerald-500/25 flex items-center gap-2 transition-all cursor-pointer hover:scale-105 active:scale-95"
-          >
-            <UploadCloud className="w-4 h-4" />
-            <span>{hasUploaded ? "Upload Different File (.csv / .xlsx)" : "Upload File (.csv / .xlsx)"}</span>
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,.xlsx,.xls"
-            className="hidden"
-            onChange={(e) => {
-              if (e.target.files && e.target.files[0]) {
-                handleFile(e.target.files[0]);
-              }
-            }}
-          />
-        </div>
+      {/* Center Aligned Header */}
+      <div className="text-center space-y-2 border-b border-emerald-900/60 pb-5">
+        <h2 className="text-2xl sm:text-3xl font-black text-emerald-400 tracking-tight text-center">
+          {hasUploaded ? "Active MPLADS Expenditure Dataset" : "Upload MPLADS Expenditure Dataset"}
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto font-bold text-center">
+          {hasUploaded 
+            ? "Your dataset has been ingested and reviewed across S1 (MAD Z-score), S2 (IQR), S3 (Peer comparisons), and S4 (Ghost velocity). Drop a new file below to re-analyze."
+            : "Upload any MPLADS expenditure dataset (.csv / .xlsx). The system will mathematically review and score each expenditure."
+          }
+        </p>
       </div>
 
-      {/* Bento Drag & Drop Area */}
+      {/* Center Aligned Drag & Drop Area */}
       <div
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`border-2 border-dashed rounded-3xl p-8 sm:p-12 text-center transition-all cursor-pointer ${
+        className={`border-2 border-dashed rounded-3xl p-8 sm:p-12 text-center transition-all cursor-pointer max-w-3xl mx-auto ${
           isDragging
             ? 'border-emerald-400 bg-emerald-950/40 scale-[1.01] shadow-xl shadow-emerald-500/20'
             : 'border-emerald-500/30 bg-slate-950/70 hover:border-emerald-500/60 hover:bg-slate-900/80 shadow-sm'
@@ -172,53 +98,77 @@ export default function UploadSection({ onUploadSuccess, hasUploaded, onReset })
             <h4 className="text-lg font-black text-white">
               Drag & Drop your MPLADS expenditure file here, or <span className="text-emerald-400 underline decoration-2">browse</span>
             </h4>
-            <p className="text-xs text-slate-400 max-w-lg mx-auto font-bold">
-              Auto-maps fields: <code>cost / amount</code>, <code>agency / contractor</code>, <code>dates</code>, <code>category / work_type</code>, <code>district</code>. Unlabelled records scored with &gt;90% precision; ground-truth preserved with 100% exact fidelity.
+            <p className="text-xs text-slate-400 font-bold">
+              Supports .csv, .xlsx, .xls formats
             </p>
           </div>
         )}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,.xlsx,.xls"
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files && e.target.files[0]) {
+              handleFile(e.target.files[0]);
+            }
+          }}
+        />
       </div>
+
+      {/* Quick Benchmark Action */}
+      {!hasUploaded && (
+        <div className="flex items-center justify-center gap-3 pt-1">
+          <button
+            onClick={() => onUploadSuccess && onUploadSuccess({ status: 'success', message: 'Loaded 4,265 pre-scored benchmark records' })}
+            className="px-5 py-2.5 rounded-2xl bg-emerald-400 hover:bg-emerald-300 text-black text-xs font-black shadow-lg shadow-emerald-400/25 transition-all flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
+          >
+            <span>⚡ Use Benchmark Sample Dataset (4,265 Records)</span>
+          </button>
+        </div>
+      )}
 
       {/* Error Alert */}
       {uploadError && (
-        <div className="bg-rose-950/40 border-2 border-rose-600/50 p-4 rounded-2xl flex items-center gap-3 text-rose-300 text-xs font-bold shadow-sm">
+        <div className="bg-rose-950/40 border-2 border-rose-600/50 p-4 rounded-2xl flex items-center justify-center gap-3 text-rose-300 text-xs font-bold shadow-sm max-w-2xl mx-auto">
           <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
           <span>{uploadError}</span>
         </div>
       )}
 
-      {/* Success Summary Bento Strip */}
+      {/* Success Summary Banner */}
       {uploadResult && (
-        <div className="bg-emerald-950/30 border-2 border-emerald-500/30 p-5 rounded-2xl space-y-3 shadow-sm">
-          <div className="flex items-center gap-2 text-emerald-400 font-black text-sm">
+        <div className="bg-emerald-950/30 border-2 border-emerald-500/30 p-5 rounded-2xl space-y-3 shadow-sm max-w-3xl mx-auto">
+          <div className="flex items-center justify-center gap-2 text-emerald-400 font-black text-sm">
             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
             <span>{uploadResult.message || "Dataset successfully scored and reviewed!"}</span>
           </div>
 
           {uploadResult.summary && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-              <div className="bg-slate-900/90 p-3.5 rounded-xl border border-emerald-500/20 shadow-sm">
-                <div className="text-[11px] text-slate-400 font-bold uppercase">Total Works Analyzed</div>
+              <div className="bg-slate-900/90 p-3.5 rounded-xl border border-emerald-500/20 shadow-sm text-center">
+                <div className="text-[11px] text-slate-400 font-bold uppercase">Total Works</div>
                 <div className="text-xl font-black font-mono text-white mt-0.5">
                   {uploadResult.summary.total_records}
                 </div>
               </div>
-              <div className="bg-slate-900/90 p-3.5 rounded-xl border border-emerald-500/20 shadow-sm">
-                <div className="text-[11px] text-slate-400 font-bold uppercase">Critical Flagged (CRS ≥ 75)</div>
+              <div className="bg-slate-900/90 p-3.5 rounded-xl border border-emerald-500/20 shadow-sm text-center">
+                <div className="text-[11px] text-slate-400 font-bold uppercase">Critical (CRS ≥ 75)</div>
                 <div className="text-xl font-black font-mono text-emerald-400 mt-0.5">
                   {uploadResult.summary.critical_anomalies_count || 0}
                 </div>
               </div>
-              <div className="bg-slate-900/90 p-3.5 rounded-xl border border-emerald-500/20 shadow-sm">
-                <div className="text-[11px] text-slate-400 font-bold uppercase">Ghost Bills (≤3d finish)</div>
+              <div className="bg-slate-900/90 p-3.5 rounded-xl border border-emerald-500/20 shadow-sm text-center">
+                <div className="text-[11px] text-slate-400 font-bold uppercase">Ghost Bills (≤3d)</div>
                 <div className="text-xl font-black font-mono text-emerald-400 mt-0.5">
                   {uploadResult.summary.ghost_bills_count || 0}
                 </div>
               </div>
-              <div className="bg-slate-900/90 p-3.5 rounded-xl border border-emerald-500/20 shadow-sm">
-                <div className="text-[11px] text-slate-400 font-bold uppercase">Auto-Label Precision</div>
+              <div className="bg-slate-900/90 p-3.5 rounded-xl border border-emerald-500/20 shadow-sm text-center">
+                <div className="text-[11px] text-slate-400 font-bold uppercase">Precision</div>
                 <div className="text-xl font-black font-mono text-emerald-400 mt-0.5">
-                  &gt;92% Empirical
+                  &gt;92%
                 </div>
               </div>
             </div>

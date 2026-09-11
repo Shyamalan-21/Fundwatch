@@ -19,21 +19,21 @@ _active_custom_summary: dict | None = None
 
 
 def get_current_works_df() -> pd.DataFrame:
-    """Returns uploaded dataset if available, otherwise default clean_works dataset."""
+    """Returns active dataset (uploaded or pre-processed baseline)."""
     global _active_custom_df
-    if _active_custom_df is not None:
+    if _active_custom_df is not None and not _active_custom_df.empty:
         return _active_custom_df
-
-    store = get_store()
-    if not store.works.empty:
-        # Auto-label default clean works if needed
-        df_clean = store.works.copy()
-        if "sanction_amount" in df_clean.columns and "cost" not in df_clean.columns:
-            df_clean["cost"] = df_clean["sanction_amount"]
-        labeled_df, summary = process_and_autolabel_dataset(df_clean)
-        _active_custom_df = labeled_df
-        return labeled_df
-
+    
+    # Auto-load and auto-label processed clean_works.csv
+    clean_path = BASE_DIR / "data" / "processed" / "clean_works.csv"
+    if clean_path.exists():
+        try:
+            df_raw = pd.read_csv(clean_path)
+            labeled_df, summary = process_and_autolabel_dataset(df_raw)
+            _active_custom_df = labeled_df
+            return _active_custom_df
+        except Exception as e:
+            print(f"[!] Auto-initialization error: {e}")
     return pd.DataFrame()
 
 
@@ -50,11 +50,25 @@ async def upload_dataset(file: UploadFile = File(...)):
 
     try:
         if filename.endswith(".csv"):
-            df_raw = pd.read_csv(io.BytesIO(contents))
+            try:
+                df_raw = pd.read_csv(io.BytesIO(contents), encoding="utf-8")
+            except UnicodeDecodeError:
+                try:
+                    df_raw = pd.read_csv(io.BytesIO(contents), encoding="latin1")
+                except UnicodeDecodeError:
+                    df_raw = pd.read_csv(io.BytesIO(contents), encoding="cp1252")
         elif filename.endswith((".xlsx", ".xls")):
-            df_raw = pd.read_excel(io.BytesIO(contents))
+            try:
+                df_raw = pd.read_excel(io.BytesIO(contents), engine="openpyxl")
+            except Exception:
+                try:
+                    df_raw = pd.read_excel(io.BytesIO(contents))
+                except Exception as excel_err:
+                    raise HTTPException(status_code=400, detail=f"Excel parsing error: {str(excel_err)}")
         else:
             raise HTTPException(status_code=400, detail="Only .csv and .xlsx files are supported.")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to parse file: {str(e)}")
 
@@ -65,6 +79,53 @@ async def upload_dataset(file: UploadFile = File(...)):
     labeled_df, summary = process_and_autolabel_dataset(df_raw)
     _active_custom_df = labeled_df
     _active_custom_summary = summary
+
+    # Update in-memory store anomalies and scored panel
+    store = get_store()
+    anom_rows = []
+    for _, r in labeled_df.iterrows():
+        crs = float(r.get("composite_risk_score", 0))
+        if crs >= 40.0:  # Watchlist, High Risk, Critical
+            anom_rows.append({
+                "anomaly_id": f"ANOM_{r.get('work_id', '')}",
+                "agency_id": str(r.get("agency_name", "")),
+                "agency_name": str(r.get("agency_name", "")),
+                "state": str(r.get("state", "India")),
+                "district": str(r.get("district", "District")),
+                "year_month": str(r.get("year_month", "2023-03")),
+                "monthly_amount": float(r.get("cost_inr", 0)),
+                "risk_score": round(crs, 1),
+                "risk_tier": str(r.get("risk_tier", "NORMAL")),
+                "severity": str(r.get("risk_tier", "NORMAL")),
+                "mod_z_score": float(r.get("mod_z_score", 0)),
+                "peer_cost_ratio": float(r.get("peer_cost_ratio", 1)),
+                "velocity_spike_ratio": float(r.get("velocity_spike_ratio", 1)),
+                "is_ghost_bill": bool(r.get("is_ghost_bill", False)),
+                "trigger_reason": f"CRS {crs:.1f}/100 • Z={r.get('mod_z_score', 0):.1f} • P2P={r.get('peer_cost_ratio', 1):.1f}x"
+            })
+
+    if anom_rows:
+        store.anomalies = pd.DataFrame(anom_rows).sort_values("risk_score", ascending=False)
+    else:
+        # If all low risk, still show top 5
+        top_sample = labeled_df.sort_values("composite_risk_score", ascending=False).head(10)
+        store.anomalies = pd.DataFrame([{
+            "anomaly_id": f"ANOM_{r.get('work_id', '')}",
+            "agency_id": str(r.get("agency_name", "")),
+            "agency_name": str(r.get("agency_name", "")),
+            "state": str(r.get("state", "India")),
+            "district": str(r.get("district", "District")),
+            "year_month": str(r.get("year_month", "2023-03")),
+            "monthly_amount": float(r.get("cost_inr", 0)),
+            "risk_score": round(float(r.get("composite_risk_score", 0)), 1),
+            "risk_tier": str(r.get("risk_tier", "NORMAL")),
+            "severity": str(r.get("risk_tier", "NORMAL")),
+            "mod_z_score": float(r.get("mod_z_score", 0)),
+            "peer_cost_ratio": float(r.get("peer_cost_ratio", 1)),
+            "velocity_spike_ratio": float(r.get("velocity_spike_ratio", 1)),
+            "is_ghost_bill": bool(r.get("is_ghost_bill", False)),
+            "trigger_reason": "Baseline execution pattern"
+        } for _, r in top_sample.iterrows()])
 
     # Sample top flagged anomalies
     top_flagged = labeled_df.sort_values("composite_risk_score", ascending=False).head(20).to_dict(orient="records")
@@ -351,20 +412,27 @@ def get_radar_profiler():
     # Group by agency and compute mean scores
     agencies_radar = []
     for agency, grp in df.groupby("agency_name"):
-        s1 = round(float(grp["mod_z_score"].apply(lambda z: min(100.0, z * 25.0)).mean()), 1)
-        s2 = round(float(grp["iqr_ratio"].apply(lambda r: min(100.0, r * 30.0)).mean()), 1)
-        s3 = round(float(grp["peer_cost_ratio"].apply(lambda p: min(100.0, p * 30.0)).mean()), 1)
-        s4 = round(float(grp["velocity_spike_ratio"].apply(lambda v: min(100.0, v * 30.0)).mean()), 1)
+        mod_z_col = grp["mod_z_score"] if "mod_z_score" in grp.columns else pd.Series(0, index=grp.index)
+        iqr_col = grp["iqr_ratio"] if "iqr_ratio" in grp.columns else pd.Series(0, index=grp.index)
+        peer_col = grp["peer_cost_ratio"] if "peer_cost_ratio" in grp.columns else (grp["peer_ratio"] if "peer_ratio" in grp.columns else pd.Series(1.0, index=grp.index))
+        vel_col = grp["velocity_spike_ratio"] if "velocity_spike_ratio" in grp.columns else (grp["velocity_ratio"] if "velocity_ratio" in grp.columns else pd.Series(1.0, index=grp.index))
+        crs_col = grp["composite_risk_score"] if "composite_risk_score" in grp.columns else pd.Series(0, index=grp.index)
+
+        s1 = round(float(mod_z_col.fillna(0).apply(lambda z: min(100.0, float(z) * 25.0)).mean()), 1)
+        s2 = round(float(iqr_col.fillna(0).apply(lambda r: min(100.0, float(r) * 30.0)).mean()), 1)
+        s3 = round(float(peer_col.fillna(1.0).apply(lambda p: min(100.0, float(p) * 30.0)).mean()), 1)
+        s4 = round(float(vel_col.fillna(1.0).apply(lambda v: min(100.0, float(v) * 30.0)).mean()), 1)
+        
         # Check ghost bills
         if "is_ghost_bill" in grp.columns and grp["is_ghost_bill"].sum() > 0:
             s4 = max(s4, 90.0)
 
-        crs = round(float(grp["composite_risk_score"].mean()), 1)
+        crs = round(float(crs_col.fillna(0).mean()), 1)
 
         agencies_radar.append({
-            "agency_name": agency,
+            "agency_name": str(agency),
             "works_count": len(grp),
-            "total_spend_inr": float(grp["cost_inr"].sum()),
+            "total_spend_inr": float(grp["cost_inr"].sum()) if "cost_inr" in grp.columns else 0.0,
             "s1_score": s1,
             "s2_score": s2,
             "s3_score": s3,
@@ -433,4 +501,127 @@ def get_waterfall_monopoly():
         a["cumulative_share_pct"] = round(min(100.0, cum_spend), 1)
 
     return top_agencies
+
+
+@router.get("/cross-agency-comparison")
+def get_cross_agency_comparison():
+    """
+    Cross-Agency Peer Comparison Engine — the core intelligence feature.
+    Groups ALL agencies by work_category (identical work type) and identifies
+    which agencies are SYSTEMATIC OUTLIERS vs their true peers, not just
+    individual transaction anomalies.
+
+    For each category:
+      - Computes peer median, IQR, outlier threshold (2× peer median)
+      - Ranks every agency by their median cost within the category
+      - Classifies each as OUTLIER / ELEVATED / NORMAL
+      - Returns deviation % from peer median (the key insight number)
+    """
+    df = get_current_works_df()
+    if df.empty:
+        return {"categories": [], "by_category": {}}
+
+    results_categories = []
+    results_by_category = {}
+
+    for cat, cat_df in df.groupby("work_category"):
+        cat = str(cat)
+
+        # Per-agency median costs for peer-level benchmark
+        agency_medians_series = cat_df.groupby("agency_name")["cost_inr"].median()
+        n_agencies = len(agency_medians_series)
+        if n_agencies == 0:
+            continue
+
+        peer_median = float(agency_medians_series.median())
+        peer_q1 = float(agency_medians_series.quantile(0.25))
+        peer_q3 = float(agency_medians_series.quantile(0.75))
+        outlier_threshold = peer_median * 2.0   # 2× peer median → OUTLIER
+        elevated_threshold = peer_median * 1.5   # 1.5× peer median → ELEVATED
+
+        agencies = []
+        for agency, ag_df in cat_df.groupby("agency_name"):
+            median_cost = float(ag_df["cost_inr"].median())
+            total_spend = float(ag_df["cost_inr"].sum())
+            works_count = len(ag_df)
+
+            crs_col = "composite_risk_score"
+            avg_risk = round(float(ag_df[crs_col].mean()), 1) if crs_col in ag_df.columns else 0.0
+            max_risk = round(float(ag_df[crs_col].max()), 1) if crs_col in ag_df.columns else 0.0
+            ghost_count = int(ag_df["is_ghost_bill"].sum()) if "is_ghost_bill" in ag_df.columns else 0
+
+            deviation_pct = round(((median_cost - peer_median) / peer_median) * 100.0, 1) if peer_median > 0 else 0.0
+            peer_ratio = round(median_cost / peer_median, 2) if peer_median > 0 else 1.0
+
+            if median_cost >= outlier_threshold:
+                outlier_tier = "OUTLIER"
+            elif median_cost >= elevated_threshold:
+                outlier_tier = "ELEVATED"
+            else:
+                outlier_tier = "NORMAL"
+
+            state_mode = ag_df["state"].mode()
+            dist_mode = ag_df["district"].mode()
+            state = str(state_mode.iloc[0]) if not state_mode.empty else "Unknown"
+            district = str(dist_mode.iloc[0]) if not dist_mode.empty else "Unknown"
+
+            # Include top flagged works for drill-down
+            top_works = []
+            flagged = ag_df.sort_values(crs_col, ascending=False).head(3) if crs_col in ag_df.columns else ag_df.head(3)
+            for _, wr in flagged.iterrows():
+                top_works.append({
+                    "work_name": str(wr.get("work_name", "Work"))[:80],
+                    "cost_inr": float(wr.get("cost_inr", 0)),
+                    "risk_score": round(float(wr.get(crs_col, 0)), 1),
+                    "year_month": str(wr.get("year_month", "")),
+                    "is_ghost_bill": bool(wr.get("is_ghost_bill", False))
+                })
+
+            agencies.append({
+                "agency_name": str(agency),
+                "state": state,
+                "district": district,
+                "works_count": works_count,
+                "median_cost_inr": round(median_cost),
+                "total_spend_inr": round(total_spend),
+                "avg_risk_score": avg_risk,
+                "max_risk_score": max_risk,
+                "ghost_bill_count": ghost_count,
+                "deviation_pct": deviation_pct,
+                "peer_ratio": peer_ratio,
+                "outlier_tier": outlier_tier,
+                "top_works": top_works
+            })
+
+        agencies.sort(key=lambda x: x["median_cost_inr"], reverse=True)
+
+        outlier_count = sum(1 for a in agencies if a["outlier_tier"] == "OUTLIER")
+        elevated_count = sum(1 for a in agencies if a["outlier_tier"] == "ELEVATED")
+
+        cat_summary = {
+            "category": cat,
+            "total_agencies": n_agencies,
+            "works_count": len(cat_df),
+            "outlier_count": outlier_count,
+            "elevated_count": elevated_count,
+            "peer_median_inr": round(peer_median),
+            "peer_q1_inr": round(peer_q1),
+            "peer_q3_inr": round(peer_q3),
+            "outlier_threshold_inr": round(outlier_threshold),
+            "total_spend_inr": round(float(cat_df["cost_inr"].sum()))
+        }
+
+        results_categories.append(cat_summary)
+        results_by_category[cat] = {
+            "benchmark": cat_summary,
+            "agencies": agencies
+        }
+
+    # Sort categories: most outliers first, then by total spend
+    results_categories.sort(key=lambda x: (x["outlier_count"], x["total_spend_inr"]), reverse=True)
+
+    return {
+        "categories": results_categories,
+        "by_category": results_by_category
+    }
 

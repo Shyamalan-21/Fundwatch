@@ -66,6 +66,27 @@ def list_anomalies(
             except Exception:
                 top_works = []
 
+        mod_z = safe(row.get("modified_z_score", row.get("modified_z", row.get("mod_z_score"))))
+        iqr_val = safe(row.get("iqr_ratio"))
+        vel_val = safe(row.get("velocity_ratio", row.get("velocity_spike_ratio")))
+        peer_val = safe(row.get("peer_ratio", row.get("peer_cost_ratio")))
+        is_ghost = bool(row.get("is_ghost_bill", False))
+
+        # Build clean trigger reason
+        reasons = []
+        if is_ghost:
+            reasons.append("Ghost Bill (≤3d sanction-to-disbursement)")
+        if mod_z and mod_z >= 3.5:
+            reasons.append(f"Z-Score {mod_z:.1f}σ spike")
+        if peer_val and peer_val >= 2.0:
+            reasons.append(f"{peer_val:.1f}× peer group deviation")
+        if vel_val and vel_val >= 2.5:
+            reasons.append(f"{vel_val:.1f}× velocity surge")
+        if iqr_val and iqr_val >= 2.5:
+            reasons.append(f"{iqr_val:.1f}× IQR spread")
+        
+        trigger_text = row.get("trigger_reason") or (", ".join(reasons) if reasons else safe(row.get("primary_flag_reason", f"Risk Score {score}/100")))
+
         out.append({
             "anomaly_id": row["anomaly_id"],
             "agency_id": row["agency_id"],
@@ -80,14 +101,19 @@ def list_anomalies(
             "risk_score": safe(row.get("risk_score")),
             "risk_tier": row.get("risk_tier", tier),
             "top_signal": safe(row.get("top_signal")),
-            "primary_flag_reason": safe(row.get("primary_flag_reason", f"Risk Score {score}/100")),
+            "primary_flag_reason": trigger_text,
+            "trigger_reason": trigger_text,
+            "mod_z_score": mod_z,
+            "peer_cost_ratio": peer_val,
+            "velocity_spike_ratio": vel_val,
+            "is_ghost_bill": is_ghost,
             "pct_of_spike_from_top3": safe(row.get("pct_of_spike_from_top3", 80.0)),
             "top_contributing_works": top_works or [],
             "signals": {
-                "modified_z_score": safe(row.get("modified_z_score", row.get("modified_z"))),
-                "iqr_ratio": safe(row.get("iqr_ratio")),
-                "velocity_ratio": safe(row.get("velocity_ratio")),
-                "peer_ratio": safe(row.get("peer_ratio")),
+                "modified_z_score": mod_z,
+                "iqr_ratio": iqr_val,
+                "velocity_ratio": vel_val,
+                "peer_ratio": peer_val,
                 "insufficient_history": bool(row.get("insufficient_history", False))
             },
         })

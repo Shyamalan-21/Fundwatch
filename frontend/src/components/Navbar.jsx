@@ -16,9 +16,6 @@ export default function Navbar({ activeTab, setActiveTab, stats, onOpenUpload })
                 <span className="font-extrabold text-lg tracking-tight text-white bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text">
                   FUNDWATCH
                 </span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                  MoSPI PS10
-                </span>
               </div>
               <p className="text-[11px] text-slate-400 font-medium">Explainable MPLADS Anomaly Detection</p>
             </div>
