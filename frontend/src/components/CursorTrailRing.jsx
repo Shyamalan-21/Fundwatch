@@ -20,79 +20,99 @@ export default function CursorTrailRing() {
     };
     window.addEventListener('resize', handleResize);
 
-    const points = [];
-    let mouse = { x: -100, y: -100 };
-    let ringPos = { x: -100, y: -100 };
+    // Particle & history arrays for smooth continuous tail
+    const history = [];
+    const maxHistory = 18;
+    const particles = [];
 
-    const handleMouseMove = (e) => {
+    let mouse = { x: -200, y: -200, moved: false };
+    let ringPos = { x: -200, y: -200 };
+
+    const handlePointerMove = (e) => {
       mouse.x = e.clientX;
       mouse.y = e.clientY;
+      mouse.moved = true;
 
+      // Update center dot instantly
       if (dotRef.current) {
         dotRef.current.style.transform = `translate3d(${mouse.x - 4}px, ${mouse.y - 4}px, 0)`;
       }
 
-      // Add trail particles (alternating red and white glow)
+      // Add to trailing history spline
+      history.push({ x: mouse.x, y: mouse.y });
+      if (history.length > maxHistory) {
+        history.shift();
+      }
+
+      // Spawn glowing green & white sparks
       for (let i = 0; i < 2; i++) {
-        points.push({
-          x: mouse.x + (Math.random() - 0.5) * 4,
-          y: mouse.y + (Math.random() - 0.5) * 4,
-          vx: (Math.random() - 0.5) * 1.5,
-          vy: (Math.random() - 0.5) * 1.5,
-          color: Math.random() > 0.45 ? '#e11d48' : '#ffffff',
+        particles.push({
+          x: mouse.x + (Math.random() - 0.5) * 6,
+          y: mouse.y + (Math.random() - 0.5) * 6,
+          vx: (Math.random() - 0.5) * 1.8,
+          vy: (Math.random() - 0.5) * 1.8,
+          color: Math.random() > 0.35 ? '#10b981' : (Math.random() > 0.5 ? '#00ff66' : '#ffffff'),
           size: Math.random() * 5 + 3,
           alpha: 1.0,
-          decay: Math.random() * 0.035 + 0.02
+          decay: Math.random() * 0.03 + 0.02
         });
       }
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('pointermove', handlePointerMove, { passive: true });
 
     let animId;
     const render = () => {
       ctx.clearRect(0, 0, width, height);
 
-      // Smooth lerp for outer cursor ring
-      ringPos.x += (mouse.x - ringPos.x) * 0.18;
-      ringPos.y += (mouse.y - ringPos.y) * 0.18;
+      // Smooth lag for outer cursor ring
+      ringPos.x += (mouse.x - ringPos.x) * 0.22;
+      ringPos.y += (mouse.y - ringPos.y) * 0.22;
 
-      if (ringRef.current) {
-        ringRef.current.style.transform = `translate3d(${ringPos.x - 18}px, ${ringPos.y - 18}px, 0)`;
+      if (ringRef.current && mouse.moved) {
+        ringRef.current.style.transform = `translate3d(${ringPos.x - 20}px, ${ringPos.y - 20}px, 0)`;
       }
 
-      // Draw ribbon trail
-      if (points.length > 2) {
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
-        for (let i = 1; i < points.length; i++) {
-          const xc = (points[i].x + points[i - 1].x) / 2;
-          const yc = (points[i].y + points[i - 1].y) / 2;
-          ctx.quadraticCurveTo(points[i - 1].x, points[i - 1].y, xc, yc);
+      // Draw continuous glowing green snake ribbon trail
+      if (history.length > 2) {
+        for (let i = 0; i < history.length - 1; i++) {
+          const ratio = (i + 1) / history.length;
+          ctx.beginPath();
+          ctx.moveTo(history[i].x, history[i].y);
+          ctx.lineTo(history[i + 1].x, history[i + 1].y);
+          ctx.strokeStyle = `rgba(16, 185, 129, ${ratio * 0.7})`;
+          ctx.lineWidth = ratio * 5;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.shadowColor = '#10b981';
+          ctx.shadowBlur = 10;
+          ctx.stroke();
         }
-        ctx.strokeStyle = 'rgba(225, 29, 72, 0.25)';
-        ctx.lineWidth = 2.5;
-        ctx.stroke();
+
+        // Slowly decay history when mouse stops moving
+        if (Math.random() > 0.5 && history.length > 0) {
+          history.shift();
+        }
       }
 
-      // Update and draw decaying particles
-      for (let i = points.length - 1; i >= 0; i--) {
-        const p = points[i];
+      // Render and update glowing green/white particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
         p.x += p.vx;
         p.y += p.vy;
         p.alpha -= p.decay;
-        p.size *= 0.96;
+        p.size *= 0.95;
 
-        if (p.alpha <= 0 || p.size <= 0.5) {
-          points.splice(i, 1);
+        if (p.alpha <= 0 || p.size <= 0.4) {
+          particles.splice(i, 1);
           continue;
         }
 
         ctx.save();
         ctx.globalAlpha = Math.max(0, p.alpha);
         ctx.fillStyle = p.color;
-        ctx.shadowColor = p.color === '#e11d48' ? 'rgba(225, 29, 72, 0.8)' : 'rgba(255, 255, 255, 0.8)';
-        ctx.shadowBlur = 8;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 12;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fill();
@@ -107,30 +127,30 @@ export default function CursorTrailRing() {
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', handleResize);
-      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('pointermove', handlePointerMove);
     };
   }, []);
 
   return (
     <>
-      {/* Fullscreen trail canvas */}
+      {/* Fullscreen trail canvas with maximum z-index and pointer-events none */}
       <canvas
         ref={canvasRef}
-        className="fixed inset-0 pointer-events-none z-50"
+        className="fixed inset-0 pointer-events-none z-[9999]"
       />
 
-      {/* Center cursor dot */}
+      {/* Center glowing green cursor dot */}
       <div
         ref={dotRef}
-        className="fixed top-0 left-0 w-2 h-2 rounded-full bg-rose-600 pointer-events-none z-50 transition-opacity duration-200 shadow-md shadow-rose-600/50"
-        style={{ transform: 'translate3d(-100px, -100px, 0)' }}
+        className="fixed top-0 left-0 w-2.5 h-2.5 rounded-full bg-emerald-400 pointer-events-none z-[9999] shadow-[0_0_12px_#10b981]"
+        style={{ transform: 'translate3d(-200px, -200px, 0)' }}
       />
 
-      {/* Floating magnetic cursor ring */}
+      {/* Outer floating magnetic cursor ring */}
       <div
         ref={ringRef}
-        className="fixed top-0 left-0 w-9 h-9 rounded-full border-2 border-rose-500/80 bg-rose-500/10 pointer-events-none z-50 transition-all duration-75 backdrop-blur-[1px] shadow-lg shadow-rose-500/20"
-        style={{ transform: 'translate3d(-100px, -100px, 0)' }}
+        className="fixed top-0 left-0 w-10 h-10 rounded-full border-2 border-emerald-400/80 bg-emerald-500/15 pointer-events-none z-[9999] backdrop-blur-[1px] shadow-[0_0_18px_rgba(16,185,129,0.35)]"
+        style={{ transform: 'translate3d(-200px, -200px, 0)' }}
       />
     </>
   );
